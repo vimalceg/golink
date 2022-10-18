@@ -108,14 +108,16 @@ class GolinkBaseView(web.View):
         full_context = dict({'auth': self.auth}, **context)
         return aiohttp_jinja2.render_template(name, self.request, full_context)
 
-    async def handle_golink(self, name, suffix=None):
+    def handle_golink(self, name, suffix=None):
         try:
-            golink = await self.database.find_by_name(name)
+            print("name",name)
+            golink = self.database.find_by_name(name)
+            
         except KeyError:
             # Redirect to edit view
             raise web.HTTPSeeOther(self.url_for_edit(name))
 
-        await self.database.increment_visits(name)
+        self.database.increment_visits(name)
         url = golink.with_suffix(suffix) if suffix else golink.url
         raise web.HTTPFound(url)
 
@@ -137,7 +139,7 @@ class IndexView(GolinkBaseView):
     """Handles index requests."""
 
     async def get(self):
-        golinks = list(await self.database.find_by_owner(self.auth.current_user()))
+        golinks = list( self.database.find_by_owner(self.auth.current_user()))
         return self.render_template('index.html', {'golinks': golinks})
 
     async def post(self):
@@ -162,7 +164,7 @@ class SearchView(GolinkBaseView):
         query = self.request.query.get('q')
 
         if query:
-            golinks = await self.database.search(query)
+            golinks = self.database.search(query)
         else:
             golinks = {}
 
@@ -203,7 +205,7 @@ class EditView(GolinkBaseView):
 
     async def get(self):
         try:
-            golink = await self.database.find_by_name(self.name)
+            golink =  self.database.find_by_name(self.name)
         except KeyError:
             return self.render_template('create.html', {'name': self.name})
 
@@ -217,7 +219,7 @@ class EditView(GolinkBaseView):
         url, = self.require_fields(post, ('url',))
 
         try:
-            current_golink = await self.database.find_by_name(self.name)
+            current_golink = self.database.find_by_name(self.name)
         except KeyError:
             if not self.auth.can_create():
                 raise web.HTTPForbidden()
@@ -228,13 +230,13 @@ class EditView(GolinkBaseView):
         action = post.get('action')
 
         if action == "delete":
-            await self.database.delete(self.name)
+            self.database.delete(self.name)
         else:
             try:
                 golink = Golink(self.name, url, self.auth.current_user())
             except ValueError as e:
                 raise web.HTTPBadRequest(text='Invalid Golink: {}'.format(e))
-            await self.database.insert_or_replace(golink)
+            self.database.insert_or_replace(golink)
 
         # Redirect to edit view
         raise web.HTTPSeeOther(self.url_for_edit(self.name))
@@ -246,4 +248,4 @@ class GolinkView(GolinkBaseView):
 
     async def get(self):
         self.validate_name()
-        return await self.handle_golink(self.name, self.suffix)
+        return self.handle_golink(self.name, self.suffix)

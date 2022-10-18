@@ -32,23 +32,27 @@ DELETE_SQL = 'DELETE FROM Golinks WHERE name=:name'
 
 
 def _loop_run_in_executor(func):
-    def _run(self, *args, **kwargs):
-        return self._loop.run_in_executor(
-            self._executor, partial(func, self, *args, **kwargs))
-    return _run
+    # def _run(self, *args, **kwargs):
+    #     return self._loop.run_in_executor(
+    #         self._executor, partial(func, self, *args, **kwargs))
+    # return _run
+    return func
 
 
 class Database(persistence.Database):
     @classmethod
     def connect(cls, database, loop=None):
+        print("loop",loop)
         if loop is None:
             loop = asyncio.get_event_loop()
+        print("aloop",loop)
         executor = ThreadPoolExecutor(1)
-        con = executor.submit(sqlite3.connect, database).result()
+        con = executor.submit(sqlite3.connect, database,check_same_thread=False).result()
         executor.submit(con.execute, CREATE_TABLE_SQL).result()
         return cls(con, executor, loop)
 
     def __init__(self, con, executor, loop=None):
+        print("init",loop)
         if loop is None:
             loop = asyncio.get_event_loop()
         self._con = con

@@ -3,7 +3,7 @@
 import argparse
 import logging
 import pkg_resources
-
+import threading
 from aiohttp import web
 import aiohttp_jinja2
 import jinja2
@@ -14,7 +14,7 @@ from golink import views, auth, sqlite, mongodb
 def connect_to_database(type, connection_string):
     logging.info('Connecting to %s: %s', type, connection_string)
     if type == "sqlite":
-        return sqlite.Database.connect(connection_string)
+        return sqlite.Database.connect(connection_string,threading.current_thread())
     elif type == "mongodb":
         return mongodb.Database.connect(connection_string)
     else:
